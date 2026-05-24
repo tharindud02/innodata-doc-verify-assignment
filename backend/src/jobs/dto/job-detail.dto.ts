@@ -42,6 +42,7 @@ import {
     citationPage!: number | null;
     citationSection!: string | null;
     citationChunkId!: string | null;
+    citationMonograph!: string | null;
   }
   
   export class FlaggedEntityDto {
@@ -52,6 +53,7 @@ import {
   export class JobDetailDto {
     id!: string;
     documentId!: string;
+    referenceDocumentId!: string;
     status!: JobStatus;
     filename!: string;
     stages!: StageDto[];

@@ -6,6 +6,7 @@ import {
     NotFoundException,
     ForbiddenException,
   } from '@nestjs/common';
+  import { ConfigService } from '@nestjs/config';
   import * as path from 'node:path';
   import { DocumentKind, JobStatus, StageStatus } from '@prisma/client';
   import { PrismaService } from '../prisma/prisma.service';
@@ -32,6 +33,7 @@ import {
       private readonly prisma: PrismaService,
       private readonly storage: FileStorage,
       private readonly parser: DocumentParser,
+      private readonly config: ConfigService,
     ) {}
   
     /**
@@ -77,7 +79,35 @@ import {
           'No reference document is configured. Run the seed script.',
         );
       }
-  
+
+      // Idempotent uploads: if the same user uploads the same bytes twice in a
+      // short window (double-click, network retry), return the existing job
+      // instead of creating duplicate documents/jobs. Window is configurable via
+      // DEDUP_WINDOW_MS (default 5 minutes).
+      const dedupWindowMs = Number(
+        this.config.get<string>('DEDUP_WINDOW_MS') ?? 300_000,
+      );
+      const windowStart = new Date(Date.now() - dedupWindowMs);
+      const existingJob = await this.prisma.job.findFirst({
+        where: {
+          userId,
+          createdAt: { gte: windowStart },
+          primaryDocument: { contentHash },
+        },
+        select: { id: true, primaryDocumentId: true },
+        orderBy: { createdAt: 'desc' },
+      });
+      if (existingJob) {
+        await this.storage.tryDelete(relPath);
+        this.logger.log(
+          `Deduped upload: user=${userId} job=${existingJob.id} hash=${contentHash.slice(0, 8)}`,
+        );
+        return {
+          jobId: existingJob.id,
+          documentId: existingJob.primaryDocumentId,
+        };
+      }
+
       try {
         const { jobId, documentId } = await this.prisma.$transaction(
           async (tx) => {
