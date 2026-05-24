@@ -11,6 +11,8 @@ import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { DocumentsModule } from './documents/documents.module';
 import { JobsModule } from './jobs/jobs.module';
 import { RagModule } from './rag/rag.module';
+import { LlmModule } from './llm/llm.module';
+import { PipelineModule } from './pipeline/pipeline.module';
 
 @Module({
   imports: [
@@ -21,8 +23,13 @@ import { RagModule } from './rag/rag.module';
         DATABASE_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().min(16).required(),
         JWT_EXPIRES_IN: Joi.string().default('7d'),
-        ANTHROPIC_API_KEY: Joi.string().required(),
-        ANTHROPIC_MODEL: Joi.string().default('claude-sonnet-4-5'),
+        LLM_PROVIDER: Joi.string().valid('openai', 'anthropic').optional(),
+        OPENAI_API_KEY: Joi.string().optional(),
+        OPENAI_MODEL: Joi.string().default('gpt-4o'),
+        ANTHROPIC_API_KEY: Joi.string().optional(),
+        ANTHROPIC_AUTH_TOKEN: Joi.string().optional(),
+        ANTHROPIC_BASE_URL: Joi.string().uri().optional(),
+        ANTHROPIC_MODEL: Joi.string().default('claude-opus-4-6'),
         BACKEND_PORT: Joi.number().default(3001),
         REDIS_HOST: Joi.string().default('localhost'),
         REDIS_PORT: Joi.number().default(6379),
@@ -46,6 +53,8 @@ import { RagModule } from './rag/rag.module';
     DocumentsModule,
     JobsModule,
     RagModule,
+    LlmModule,
+    PipelineModule
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],

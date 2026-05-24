@@ -3,7 +3,13 @@ import { Logger } from '@nestjs/common';
 import { Job } from 'bullmq';
 import { JobStatus, StageName } from '@prisma/client';
 import { PIPELINE_QUEUE, PipelineJobData } from '../jobs/queue.constants';
+import { PrismaService } from '../prisma/prisma.service';
 import { StageTracker } from './stage-tracker.service';
+import { PipelineContext } from './pipeline.context';
+import { ParseStage } from './stages/parse.stage';
+import { ChunkStage } from './stages/chunk.stage';
+import { EmbedStage } from './stages/embed.stage';
+import { SummarizeStage } from './stages/summarize.stage';
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -11,7 +17,14 @@ const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 export class PipelineProcessor extends WorkerHost {
   private readonly logger = new Logger(PipelineProcessor.name);
 
-  constructor(private readonly tracker: StageTracker) {
+  constructor(
+    private readonly tracker: StageTracker,
+    private readonly prisma: PrismaService,
+    private readonly parseStage: ParseStage,
+    private readonly chunkStage: ChunkStage,
+    private readonly embedStage: EmbedStage,
+    private readonly summarizeStage: SummarizeStage,
+  ) {
     super();
   }
 
@@ -19,37 +32,33 @@ export class PipelineProcessor extends WorkerHost {
     const { jobId } = job.data;
     this.logger.log(`Picked up job ${jobId} (bullmq id=${job.id})`);
 
+    const dbJob = await this.prisma.job.findUniqueOrThrow({
+      where: { id: jobId },
+      select: {
+        primaryDocumentId: true,
+        referenceDocumentId: true,
+        userId: true,
+      },
+    });
+    const ctx: PipelineContext = { jobId, ...dbJob };
+
     try {
       await this.tracker.setJobStatus(jobId, JobStatus.RUNNING);
 
-      // ── Stub stages (real implementations land in commits 8–10) ──
-      await this.tracker.run(jobId, StageName.PARSE, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.CHUNK, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.EMBED, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.SUMMARIZE, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.CRITICAL_POINTS, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.EXTRACT, async () => {
-        await sleep(500);
-      });
-      await this.tracker.run(jobId, StageName.VERIFY, async () => {
-        await sleep(500);
-      });
+      await this.tracker.run(jobId, StageName.PARSE, () => this.parseStage.run(ctx));
+      await this.tracker.run(jobId, StageName.CHUNK, () => this.chunkStage.run(ctx));
+      await this.tracker.run(jobId, StageName.EMBED, () => this.embedStage.run(ctx));
+      await this.tracker.run(jobId, StageName.SUMMARIZE, () => this.summarizeStage.run(ctx));
+
+      // Stub stages remaining — filled in commits 9-10
+      await this.tracker.run(jobId, StageName.CRITICAL_POINTS, async () => { await sleep(300); });
+      await this.tracker.run(jobId, StageName.EXTRACT, async () => { await sleep(300); });
+      await this.tracker.run(jobId, StageName.VERIFY, async () => { await sleep(300); });
 
       await this.tracker.setJobStatus(jobId, JobStatus.COMPLETED);
     } catch (e) {
       const message = (e as Error).message ?? 'Unknown error';
       await this.tracker.setJobStatus(jobId, JobStatus.FAILED, message);
-      // Re-throw so BullMQ marks the bullmq-job as failed too (visible in any monitoring UI)
       throw e;
     }
   }

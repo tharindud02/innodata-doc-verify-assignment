@@ -28,6 +28,7 @@
     "seed": "ts-node prisma/seeds.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.98.0",
     "@nestjs/bullmq": "^11.0.4",
     "@nestjs/common": "^11.0.1",
     "@nestjs/config": "^4.0.4",
@@ -45,6 +46,7 @@
     "joi": "^18.2.1",
     "mammoth": "^1.12.0",
     "multer": "^2.1.1",
+    "openai": "^6.39.0",
     "passport": "^0.7.0",
     "passport-jwt": "^4.0.1",
     "pg": "^8.21.0",

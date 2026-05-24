@@ -4,18 +4,20 @@ import { JobsController } from './jobs.controller';
 import { JobsService } from './jobs.service';
 import { PipelineQueueService } from './pipeline-queue.service';
 import { PipelineProcessor } from '../pipeline/pipeline.processor';
-import { StageTracker } from '../pipeline/stage-tracker.service';
+import { PipelineModule } from '../pipeline/pipeline.module';
 import { PIPELINE_QUEUE } from './queue.constants';
 
 @Module({
-  imports: [BullModule.registerQueue({ name: PIPELINE_QUEUE })],
+  imports: [
+    BullModule.registerQueue({ name: PIPELINE_QUEUE }),
+    PipelineModule, // exports StageTracker + every stage the processor needs
+  ],
   controllers: [JobsController],
   providers: [
     JobsService,
     PipelineQueueService,
-    PipelineProcessor,
-    StageTracker,
+    PipelineProcessor, 
   ],
-  exports: [JobsService, PipelineQueueService, StageTracker],
+  exports: [JobsService, PipelineQueueService],
 })
 export class JobsModule {}
