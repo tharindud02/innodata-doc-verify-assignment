@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from "react";
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
+import { getApiErrorMessage } from "@/lib/api-error";
 import { FileCheck2 } from "lucide-react";
 
 export function LoginPage() {
@@ -18,8 +19,8 @@ export function LoginPage() {
     try {
       await login(email, password);
       nav("/");
-    } catch (e: any) {
-      setErr(e.response?.data?.message ?? "Login failed");
+    } catch (error: unknown) {
+      setErr(getApiErrorMessage(error, "Login failed"));
     } finally {
       setLoading(false);
     }
@@ -38,6 +39,7 @@ export function LoginPage() {
             <input
               type="email"
               required
+              autoComplete="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-brand-500"
@@ -48,13 +50,19 @@ export function LoginPage() {
             <input
               type="password"
               required
+              autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full rounded-md border border-slate-300 px-3 py-2 outline-none focus:border-brand-500"
             />
           </div>
-          {err && <p className="text-sm text-red-600">{err}</p>}
+          {err && (
+            <p className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700" role="alert">
+              {err}
+            </p>
+          )}
           <button
+            type="submit"
             disabled={loading}
             className="w-full rounded-md bg-brand-600 py-2 font-medium text-white hover:bg-brand-700 disabled:opacity-50"
           >
