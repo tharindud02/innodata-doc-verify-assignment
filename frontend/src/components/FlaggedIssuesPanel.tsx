@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Link } from "react-router";
 import type { FlaggedEntity } from "@/types/api";
 import {
   CheckCircle2,
@@ -6,6 +7,7 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronRight,
+  ExternalLink,
 } from "lucide-react";
 
 const STATUS_META = {
@@ -32,19 +34,31 @@ const STATUS_META = {
   },
 } as const;
 
-export function FlaggedIssuesPanel({ items }: { items: FlaggedEntity[] }) {
+export function FlaggedIssuesPanel({
+  items,
+  jobId,
+}: {
+  items: FlaggedEntity[];
+  jobId: string;
+}) {
   if (!items.length)
     return <p className="text-sm text-slate-500">No medications extracted.</p>;
   return (
     <div className="space-y-2">
       {items.map((it) => (
-        <FlaggedRow key={it.entity.id} item={it} />
+        <FlaggedRow key={it.entity.id} item={it} jobId={jobId} />
       ))}
     </div>
   );
 }
 
-function FlaggedRow({ item }: { item: FlaggedEntity }) {
+function FlaggedRow({
+  item,
+  jobId,
+}: {
+  item: FlaggedEntity;
+  jobId: string;
+}) {
   const [open, setOpen] = useState(false);
   const status = item.flag?.status ?? "UNSUPPORTED";
   const meta = STATUS_META[status];
@@ -85,12 +99,28 @@ function FlaggedRow({ item }: { item: FlaggedEntity }) {
           )}
           {item.flag?.citationText ? (
             <div className="rounded-md border bg-slate-50 p-3">
-              <p className="mb-1 text-xs font-medium text-slate-500">
-                Reference passage
-                {item.flag.citationSection && ` · ${item.flag.citationSection}`}
-                {item.flag.citationPage != null &&
-                  ` · p. ${item.flag.citationPage}`}
-              </p>
+              <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
+                <p className="text-xs font-medium text-slate-500">
+                  Reference passage
+                  {item.flag.citationMonograph &&
+                    ` · ${item.flag.citationMonograph}`}
+                  {item.flag.citationSection &&
+                    ` · ${item.flag.citationSection}`}
+                  {item.flag.citationPage != null &&
+                    ` · p. ${item.flag.citationPage}`}
+                </p>
+                {(item.flag.status === "SUPPORTED" ||
+                  item.flag.status === "CONTRADICTED") &&
+                  item.flag.citationChunkId && (
+                    <Link
+                      to={`/reference/${jobId}?chunk=${item.flag.citationChunkId}`}
+                      className="inline-flex items-center gap-1 text-xs font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      <ExternalLink className="h-3 w-3" />
+                      View in reference
+                    </Link>
+                  )}
+              </div>
               <blockquote className="border-l-2 border-slate-300 pl-3 text-slate-700">
                 {item.flag.citationText}
               </blockquote>

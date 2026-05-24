@@ -1,9 +1,11 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useDropzone, type FileRejection } from "react-dropzone";
-import { useNavigate } from "react-router";
+import { Link, useNavigate } from "react-router";
 import { Upload, FileText, X } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { storeUploadResult, uploadDocument } from "@/lib/documents";
+import { fetchUserJobs } from "@/lib/jobs";
+import type { JobListItem } from "@/types/api";
 
 const ACCEPTED = {
   "application/pdf": [".pdf"],
@@ -29,6 +31,13 @@ export function UploadPage() {
   const [file, setFile] = useState<File | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
+  const [recentJobs, setRecentJobs] = useState<JobListItem[]>([]);
+
+  useEffect(() => {
+    fetchUserJobs()
+      .then(setRecentJobs)
+      .catch(() => setRecentJobs([]));
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     accept: ACCEPTED,
@@ -120,6 +129,32 @@ export function UploadPage() {
       >
         {uploading ? "Uploading..." : "Verify document"}
       </button>
+
+      {recentJobs.length > 0 && (
+        <section className="mt-12 border-t pt-8">
+          <h2 className="mb-4 text-lg font-semibold">Recent documents</h2>
+          <ul className="divide-y rounded-md border bg-white">
+            {recentJobs.map((job) => (
+              <li key={job.id}>
+                <Link
+                  to={`/documents/${job.documentId}?job=${job.id}`}
+                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-50"
+                >
+                  <div>
+                    <p className="text-sm font-medium">{job.filename}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(job.createdAt).toLocaleString()}
+                    </p>
+                  </div>
+                  <span className="text-xs font-medium uppercase text-slate-500">
+                    {job.status}
+                  </span>
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 }

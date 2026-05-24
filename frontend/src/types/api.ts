@@ -52,6 +52,16 @@ export interface Flag {
   citationPage: number | null;
   citationSection: string | null;
   citationChunkId: string | null;
+  citationMonograph: string | null;
+}
+
+export interface JobListItem {
+  id: string;
+  documentId: string;
+  status: JobStatus;
+  filename: string;
+  createdAt: string;
+  completedAt: string | null;
 }
 
 export interface FlaggedEntity {
@@ -62,6 +72,7 @@ export interface FlaggedEntity {
 export interface JobDetail {
   id: string;
   documentId: string;
+  referenceDocumentId: string;
   status: JobStatus;
   filename: string;
   stages: Stage[];

@@ -61,7 +61,7 @@ export function DocumentViewPage() {
             <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
               Verification flags
             </h2>
-            <FlaggedIssuesPanel items={job.flagged} />
+            <FlaggedIssuesPanel items={job.flagged} jobId={job.id} />
           </div>
         </section>
       </div>

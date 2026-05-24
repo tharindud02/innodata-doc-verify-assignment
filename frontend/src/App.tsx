@@ -7,6 +7,7 @@ import { UploadPage } from "@/pages/UploadPage";
 import { JobStatusPage } from "@/pages/JobStatusPage";
 import { DocumentPreviewPage } from "@/pages/DocumentPreviewPage";
 import { DocumentViewPage } from "@/pages/DocumentViewPage";
+import { ReferencePage } from "@/pages/ReferencePage";
 import { useAuth } from "@/hooks/useAuth";
 import { TopBar } from "@/components/TopBar";
 
@@ -34,6 +35,7 @@ export default function App() {
           <Route path="/documents/:documentId" element={<Protected><DocumentPreviewPage /></Protected>} />
           <Route path="/jobs/:jobId" element={<Protected><JobStatusPage /></Protected>} />
           <Route path="/jobs/:jobId/results" element={<Protected><DocumentViewPage /></Protected>} />
+          <Route path="/reference/:jobId" element={<Protected><ReferencePage /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
