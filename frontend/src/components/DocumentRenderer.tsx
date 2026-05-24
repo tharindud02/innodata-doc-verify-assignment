@@ -1,20 +1,45 @@
 import { useEffect, useState } from "react";
-import { api } from "@/lib/api";
+import { fetchDocumentPreview } from "@/lib/documents";
+import { getApiErrorMessage } from "@/lib/api-error";
 
-export function DocumentRenderer({ documentId }: { documentId: string }) {
+interface DocumentRendererProps {
+  documentId: string;
+}
+
+export function DocumentRenderer({ documentId }: DocumentRendererProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    api.get<{ html: string }>(`/documents/${documentId}/preview`).then(
-      (r) => setHtml(r.data.html),
-      (e) => setErr(e.message)
+    let cancelled = false;
+    setHtml(null);
+    setErr(null);
+
+    fetchDocumentPreview(documentId).then(
+      (content) => {
+        if (!cancelled) setHtml(content);
+      },
+      (error: unknown) => {
+        if (cancelled) return;
+        setErr(getApiErrorMessage(error, "Failed to load preview"));
+      }
     );
+
+    return () => {
+      cancelled = true;
+    };
   }, [documentId]);
 
-  if (err) return <p className="text-sm text-red-600">{err}</p>;
-  if (!html)
+  if (err) {
+    return (
+      <p className="rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+        {err}
+      </p>
+    );
+  }
+  if (!html) {
     return <p className="text-sm text-slate-500">Loading document...</p>;
+  }
 
   return (
     <div

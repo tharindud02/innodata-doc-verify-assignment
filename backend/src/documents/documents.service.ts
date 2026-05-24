@@ -22,7 +22,7 @@ import {
       '.docx',
     'application/pdf': '.pdf',
   };
-  const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15 MB
+  const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   
   @Injectable()
   export class DocumentsService {

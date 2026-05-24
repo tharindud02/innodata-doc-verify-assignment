@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import type { JobDetail } from "@/types/api";
 import { api } from "@/lib/api";
+import { getAuthToken } from "@/lib/auth-session";
+import { getApiErrorMessage } from "@/lib/api-error";
 
 export function useJobStream(jobId: string | null) {
   const [job, setJob] = useState<JobDetail | null>(null);
@@ -10,29 +12,40 @@ export function useJobStream(jobId: string | null) {
     if (!jobId) return;
     let cancelled = false;
 
-    // 1. Fetch current snapshot - supports page refresh mid-processing
     api.get<JobDetail>(`/jobs/${jobId}`).then(
-      (r) => !cancelled && setJob(r.data),
-      (e) => !cancelled && setError(e.message)
+      (r) => {
+        if (!cancelled) setJob(r.data);
+      },
+      (err: unknown) => {
+        if (!cancelled) {
+          setError(getApiErrorMessage(err, "Failed to load job"));
+        }
+      }
     );
 
-    // 2. Subscribe to live updates via SSE.
-    // EventSource can't send custom headers, so token goes in the query string.
-    const token = localStorage.getItem("token");
-    const es = new EventSource(`/api/jobs/${jobId}/stream?token=${token}`);
+    const token = getAuthToken();
+    if (!token) return;
+
+    const es = new EventSource(
+      `/api/jobs/${jobId}/stream?token=${encodeURIComponent(token)}`
+    );
 
     es.onmessage = (evt) => {
       try {
         const data: JobDetail = JSON.parse(evt.data);
         setJob(data);
-        if (data.status === "COMPLETED" || data.status === "FAILED") es.close();
+        if (data.status === "COMPLETED" || data.status === "FAILED") {
+          es.close();
+        }
       } catch {
         /* ignore malformed payloads */
       }
     };
 
     es.onerror = () => {
-      if (es.readyState === EventSource.CLOSED) setError("Stream disconnected");
+      if (es.readyState === EventSource.CLOSED && !cancelled) {
+        setError((prev) => prev ?? "Stream disconnected");
+      }
     };
 
     return () => {
