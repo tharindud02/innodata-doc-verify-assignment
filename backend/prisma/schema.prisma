@@ -1,0 +1,230 @@
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["postgresqlExtensions"]
+}
+
+datasource db {
+  provider   = "postgresql"
+  extensions = [vector]
+}
+
+// ─────────────────────────────────────────────────────────────
+// Users
+// ─────────────────────────────────────────────────────────────
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  createdAt    DateTime   @default(now())
+
+  documents    Document[]
+  jobs         Job[]
+
+  @@map("users")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Documents (both primary uploads and the reference)
+// ─────────────────────────────────────────────────────────────
+enum DocumentKind {
+  PRIMARY
+  REFERENCE
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  userId      String?      // nullable: REFERENCE documents have no owner
+  user        User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  kind        DocumentKind
+  filename    String
+  mimeType    String
+  storagePath String       // path on disk under backend/uploads/
+  contentHash String       // sha256 of raw bytes — used for dedup
+  pageCount   Int?
+  createdAt   DateTime     @default(now())
+
+  // Extracted plain text, kept for re-runs without re-parsing
+  parsedText  String?      @db.Text
+  // Sanitized HTML for the frontend preview pane
+  previewHtml String?      @db.Text
+
+  chunks      Chunk[]
+  jobs        Job[]        @relation("PrimaryDocument")
+
+  @@index([userId, kind])
+  @@index([contentHash])
+  @@map("documents")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Chunks (the unit of retrieval)
+// ─────────────────────────────────────────────────────────────
+model Chunk {
+  id         String   @id @default(cuid())
+  documentId String
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  ordinal    Int      // 0-based position within document
+  monograph  String?  // e.g. "Velantine" — extracted heading for reference doc
+  section    String?  // e.g. "I. Cardiovascular Agents"
+  page       Int?
+  text       String   @db.Text
+
+  // pgvector column. 384 dims = all-MiniLM-L6-v2 (our local embed model).
+  // Prisma can't type this natively, so we use Unsupported + raw SQL for I/O.
+  embedding  Unsupported("vector(384)")?
+
+  createdAt  DateTime @default(now())
+
+  @@index([documentId, ordinal])
+  @@map("chunks")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Jobs (one per upload — the verification run)
+// ─────────────────────────────────────────────────────────────
+enum JobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+model Job {
+  id                String      @id @default(cuid())
+  userId            String
+  user              User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  primaryDocumentId String
+  primaryDocument   Document    @relation("PrimaryDocument", fields: [primaryDocumentId], references: [id], onDelete: Cascade)
+
+  referenceDocumentId String    // FK by string to allow seeded reference
+  status            JobStatus   @default(QUEUED)
+  errorMessage      String?
+
+  summary           String?     @db.Text
+
+  createdAt         DateTime    @default(now())
+  startedAt         DateTime?
+  completedAt       DateTime?
+
+  stages            Stage[]
+  criticalPoints    CriticalPoint[]
+  entities          Entity[]
+
+  @@index([userId, createdAt])
+  @@map("jobs")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Stage progress (one row per pipeline stage per job)
+// ─────────────────────────────────────────────────────────────
+enum StageName {
+  PARSE
+  CHUNK
+  EMBED
+  SUMMARIZE
+  CRITICAL_POINTS
+  EXTRACT
+  VERIFY
+}
+
+enum StageStatus {
+  PENDING
+  RUNNING
+  DONE
+  FAILED
+}
+
+model Stage {
+  id        String      @id @default(cuid())
+  jobId     String
+  job       Job         @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  name      StageName
+  status    StageStatus @default(PENDING)
+  startedAt DateTime?
+  endedAt   DateTime?
+  error     String?
+
+  @@unique([jobId, name])  // each stage exists at most once per job
+  @@map("stages")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Critical points the patient should not miss
+// ─────────────────────────────────────────────────────────────
+enum CriticalSeverity {
+  HIGH
+  MEDIUM
+  LOW
+}
+
+model CriticalPoint {
+  id         String           @id @default(cuid())
+  jobId      String
+  job        Job              @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  text       String           @db.Text
+  severity   CriticalSeverity
+  sourcePage Int?
+
+  createdAt  DateTime         @default(now())
+
+  @@index([jobId])
+  @@map("critical_points")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Extracted entities (medications from the primary doc)
+// ─────────────────────────────────────────────────────────────
+model Entity {
+  id         String   @id @default(cuid())
+  jobId      String
+  job        Job      @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  drugName   String
+  dose       String?
+  unit       String?
+  route      String?
+  frequency  String?
+  duration   String?
+  indication String?
+  sourcePage Int?
+
+  flag       Flag?    // 1:1 — every entity gets verified
+
+  createdAt  DateTime @default(now())
+
+  @@index([jobId])
+  @@map("entities")
+}
+
+// ─────────────────────────────────────────────────────────────
+// Verification flag (one per entity)
+// ─────────────────────────────────────────────────────────────
+enum FlagStatus {
+  SUPPORTED
+  CONTRADICTED
+  UNSUPPORTED
+}
+
+model Flag {
+  id              String     @id @default(cuid())
+  entityId        String     @unique
+  entity          Entity     @relation(fields: [entityId], references: [id], onDelete: Cascade)
+
+  status          FlagStatus
+  explanation     String     @db.Text
+
+  // Citation: which chunk in the reference supported this verdict
+  citationChunkId String?
+  citationText    String?    @db.Text
+  citationSection String?
+  citationPage    Int?
+
+  createdAt       DateTime   @default(now())
+
+  @@map("flags")
+}
