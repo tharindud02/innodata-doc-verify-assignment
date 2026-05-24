@@ -10,6 +10,7 @@ import { AuthModule } from './auth/auth.module';
 import { JwtAuthGuard } from './auth/jwt-auth.guard';
 import { DocumentsModule } from './documents/documents.module';
 import { JobsModule } from './jobs/jobs.module';
+import { RagModule } from './rag/rag.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { JobsModule } from './jobs/jobs.module';
     AuthModule,
     DocumentsModule,
     JobsModule,
+    RagModule,
   ],
   controllers: [AppController],
   providers: [{ provide: APP_GUARD, useClass: JwtAuthGuard }],
