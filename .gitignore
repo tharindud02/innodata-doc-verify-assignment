@@ -16,3 +16,6 @@ frontend/.env
 # Docker
 *.pid
 .docker/
+
+# Uploads (for local development)
+backend/uploads/

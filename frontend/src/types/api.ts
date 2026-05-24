@@ -1,3 +1,8 @@
+export interface UploadResult {
+  jobId: string;
+  documentId: string;
+}
+
 export type StageName =
   | "PARSE"
   | "CHUNK"

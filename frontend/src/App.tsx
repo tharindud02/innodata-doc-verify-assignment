@@ -5,6 +5,7 @@ import { LoginPage } from "@/pages/LoginPage";
 import { SignupPage } from "@/pages/SignupPage";
 import { UploadPage } from "@/pages/UploadPage";
 import { JobStatusPage } from "@/pages/JobStatusPage";
+import { DocumentPreviewPage } from "@/pages/DocumentPreviewPage";
 import { DocumentViewPage } from "@/pages/DocumentViewPage";
 import { useAuth } from "@/hooks/useAuth";
 import { TopBar } from "@/components/TopBar";
@@ -30,8 +31,9 @@ export default function App() {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/signup" element={<SignupPage />} />
           <Route path="/" element={<Protected><UploadPage /></Protected>} />
+          <Route path="/documents/:documentId" element={<Protected><DocumentPreviewPage /></Protected>} />
           <Route path="/jobs/:jobId" element={<Protected><JobStatusPage /></Protected>} />
-          <Route path="/documents/:jobId" element={<Protected><DocumentViewPage /></Protected>} />
+          <Route path="/jobs/:jobId/results" element={<Protected><DocumentViewPage /></Protected>} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>

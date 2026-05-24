@@ -1,6 +1,7 @@
 import { useParams } from "react-router";
 import { useEffect, useState } from "react";
 import { api } from "@/lib/api";
+import { getApiErrorMessage } from "@/lib/api-error";
 import type { JobDetail } from "@/types/api";
 import { DocumentRenderer } from "@/components/DocumentRenderer";
 import { SummaryPanel } from "@/components/SummaryPanel";
@@ -16,7 +17,7 @@ export function DocumentViewPage() {
     if (!jobId) return;
     api.get<JobDetail>(`/jobs/${jobId}`).then(
       (r) => setJob(r.data),
-      (e) => setErr(e.response?.data?.message ?? e.message)
+      (e: unknown) => setErr(getApiErrorMessage(e, "Failed to load results"))
     );
   }, [jobId]);
 
