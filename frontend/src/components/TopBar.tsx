@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router";
 import { useAuth } from "@/hooks/useAuth";
-import { LogOut, FileCheck2 } from "lucide-react";
+import { LogOut, FileCheck2, Upload } from "lucide-react";
 
 export function TopBar() {
   const { email, logout } = useAuth();
@@ -13,6 +13,13 @@ export function TopBar() {
           DocVerify
         </Link>
         <div className="flex items-center gap-3 text-sm text-slate-600">
+          <Link
+            to="/"
+            className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1 hover:bg-slate-50"
+          >
+            <Upload className="h-4 w-4" />
+            Upload
+          </Link>
           <span>{email}</span>
           <button
             onClick={() => { logout(); nav("/login"); }}

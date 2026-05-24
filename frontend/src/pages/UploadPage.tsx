@@ -5,6 +5,7 @@ import { Upload, FileText, X } from "lucide-react";
 import { getApiErrorMessage } from "@/lib/api-error";
 import { storeUploadResult, uploadDocument } from "@/lib/documents";
 import { fetchUserJobs } from "@/lib/jobs";
+import { WorkflowNav } from "@/components/WorkflowNav";
 import type { JobListItem } from "@/types/api";
 
 const ACCEPTED = {
@@ -73,6 +74,7 @@ export function UploadPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
+      <WorkflowNav upload={{ to: "/", label: "Upload", active: true }} />
       <h1 className="mb-2 text-2xl font-semibold">Verify a document</h1>
       <p className="mb-6 text-slate-600">
         Upload a discharge summary or prescription. We&apos;ll verify it against
@@ -136,20 +138,31 @@ export function UploadPage() {
           <ul className="divide-y rounded-md border bg-white">
             {recentJobs.map((job) => (
               <li key={job.id}>
-                <Link
-                  to={`/documents/${job.documentId}?job=${job.id}`}
-                  className="flex items-center justify-between px-4 py-3 hover:bg-slate-50"
-                >
+                <div className="flex items-center justify-between px-4 py-3">
                   <div>
                     <p className="text-sm font-medium">{job.filename}</p>
                     <p className="text-xs text-slate-500">
                       {new Date(job.createdAt).toLocaleString()}
                     </p>
                   </div>
-                  <span className="text-xs font-medium uppercase text-slate-500">
-                    {job.status}
-                  </span>
-                </Link>
+                  <div className="flex items-center gap-3">
+                    <span className="text-xs font-medium uppercase text-slate-500">
+                      {job.status}
+                    </span>
+                    <Link
+                      to={`/documents/${job.documentId}?job=${job.id}`}
+                      className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Pipeline
+                    </Link>
+                    <Link
+                      to={`/jobs/${job.id}/results`}
+                      className="text-xs font-medium text-brand-600 hover:text-brand-700"
+                    >
+                      Results
+                    </Link>
+                  </div>
+                </div>
               </li>
             ))}
           </ul>
