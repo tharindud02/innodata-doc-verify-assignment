@@ -77,6 +77,8 @@ model Chunk {
 
   createdAt  DateTime @default(now())
 
+  citationFlags Flag[]
+
   @@index([documentId, ordinal])
   @@map("chunks")
 }
@@ -220,6 +222,7 @@ model Flag {
 
   // Citation: which chunk in the reference supported this verdict
   citationChunkId String?
+  citationChunk   Chunk?     @relation(fields: [citationChunkId], references: [id], onDelete: SetNull)
   citationText    String?    @db.Text
   citationSection String?
   citationPage    Int?
