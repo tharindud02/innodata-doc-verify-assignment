@@ -1,9 +1,20 @@
 import { api } from "@/lib/api";
-import type { UploadResult } from "@/types/api";
+import type { ReferenceDocument, UploadResult } from "@/types/api";
 
-export async function uploadDocument(file: File): Promise<UploadResult> {
+export async function fetchReferences(): Promise<ReferenceDocument[]> {
+  const { data } = await api.get<ReferenceDocument[]>("/documents/references");
+  return data;
+}
+
+export async function uploadDocument(
+  file: File,
+  referenceDocumentId?: string
+): Promise<UploadResult> {
   const fd = new FormData();
   fd.append("file", file);
+  if (referenceDocumentId) {
+    fd.append("referenceDocumentId", referenceDocumentId);
+  }
   const { data } = await api.post<UploadResult>("/documents/upload", fd, {
     headers: { "Content-Type": "multipart/form-data" },
   });
