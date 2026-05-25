@@ -2,6 +2,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import pgvector from 'pgvector';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmbeddingService } from './embedding.service';
+import { structuredLog } from '../common/structured-log';
 
 export interface RetrievedChunk {
   id: string;
@@ -68,7 +69,16 @@ export class RetrievalService {
     `;
 
     this.logger.debug(
-      `Retrieved ${rows.length} chunks for query "${args.query.slice(0, 60)}..." top distance=${rows[0]?.distance.toFixed(3)}`,
+      structuredLog('pipeline.retrieval.completed', {
+        referenceDocumentId: args.documentId,
+        topK,
+        resultCount: rows.length,
+        topDistance:
+          typeof rows[0]?.distance === 'number'
+            ? Number(rows[0].distance.toFixed(3))
+            : null,
+        queryPreview: args.query.slice(0, 80),
+      }),
     );
     return rows;
   }
