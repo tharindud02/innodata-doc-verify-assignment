@@ -13,6 +13,7 @@ describe('buildJobStream', () => {
   const runningDetail = (): JobDetailDto => ({
     id: jobId,
     documentId: 'doc-1',
+    referenceDocumentId: 'ref-doc-1',
     filename: 'reference_document.docx',
     status: JobStatus.RUNNING,
     summary: null,

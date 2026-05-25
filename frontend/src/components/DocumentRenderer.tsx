@@ -4,9 +4,13 @@ import { getApiErrorMessage } from "@/lib/api-error";
 
 interface DocumentRendererProps {
   documentId: string;
+  className?: string;
 }
 
-export function DocumentRenderer({ documentId }: DocumentRendererProps) {
+export function DocumentRenderer({
+  documentId,
+  className,
+}: DocumentRendererProps) {
   const [html, setHtml] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
 
@@ -43,7 +47,10 @@ export function DocumentRenderer({ documentId }: DocumentRendererProps) {
 
   return (
     <div
-      className="max-h-[80vh] overflow-y-auto rounded-md border bg-white p-6 text-sm leading-relaxed"
+      className={
+        className ??
+        "max-h-[80vh] overflow-y-auto rounded-md border bg-white p-6 text-sm leading-relaxed"
+      }
       // Backend sanitizes via sanitize-html before serving.
       dangerouslySetInnerHTML={{ __html: html }}
     />

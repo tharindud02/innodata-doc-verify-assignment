@@ -4,12 +4,21 @@ import * as currentUserDecorator from '../auth/decorators/current-user.decorator
 import { JobsService } from './jobs.service';
 import { buildJobStream } from './jobs.sse';
 import { JobDetailDto } from './dto/job-detail.dto';
+import { JobListItemDto } from './dto/job-list-item.dto';
 
 @Controller('jobs')
 export class JobsController {
   private readonly logger = new Logger(JobsController.name);
 
   constructor(private readonly jobs: JobsService) {}
+
+  /** GET /api/jobs — recent uploads for the current user */
+  @Get()
+  async listJobs(
+    @currentUserDecorator.CurrentUser() user: currentUserDecorator.AuthUser,
+  ): Promise<JobListItemDto[]> {
+    return this.jobs.getUserJobs(user.id);
+  }
 
   /** GET /api/jobs/:id — snapshot, for the initial page load or refresh */
   @Get(':id')

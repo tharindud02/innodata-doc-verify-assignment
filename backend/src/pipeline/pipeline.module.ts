@@ -5,6 +5,7 @@ import { EmbedStage } from './stages/embed.stage';
 import { SummarizeStage } from './stages/summarize.stage';
 import { CriticalPointsStage } from './stages/critical-points.stage';
 import { ExtractStage } from './stages/extract.stage';
+import { VerifyStage } from './stages/verify.stage';
 import { StageTracker } from './stage-tracker.service';
 import { RagModule } from '../rag/rag.module';
 
@@ -18,6 +19,7 @@ import { RagModule } from '../rag/rag.module';
     SummarizeStage,
     CriticalPointsStage,
     ExtractStage,
+    VerifyStage,
   ],
   exports: [
     StageTracker,
@@ -27,6 +29,7 @@ import { RagModule } from '../rag/rag.module';
     SummarizeStage,
     CriticalPointsStage,
     ExtractStage,
+    VerifyStage,
   ],
 })
 export class PipelineModule {}

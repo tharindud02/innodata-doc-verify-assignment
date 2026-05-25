@@ -23,6 +23,7 @@ describe('JobsService', () => {
   const baseJob = {
     id: jobId,
     userId: ownerId,
+    referenceDocumentId: 'ref-doc-1',
     status: JobStatus.COMPLETED,
     summary: null,
     createdAt: new Date('2026-05-24T08:55:50.406Z'),
@@ -49,7 +50,7 @@ describe('JobsService', () => {
 
   beforeEach(() => {
     prisma = {
-      job: { findUnique: jest.fn() },
+      job: { findUnique: jest.fn(), findMany: jest.fn() },
     };
     service = new JobsService(prisma as unknown as PrismaService);
   });
@@ -66,6 +67,7 @@ describe('JobsService', () => {
     );
     expect(detail.stages.every((s) => s.startedAt && s.endedAt)).toBe(true);
     expect(detail.completedAt).toBe('2026-05-24T08:55:54.226Z');
+    expect(detail.referenceDocumentId).toBe('ref-doc-1');
   });
 
   it('returns a mid-pipeline snapshot for refresh without losing stage progress', async () => {

@@ -1,7 +1,8 @@
 import { Link, useParams, useSearchParams } from "react-router";
-import { ArrowLeft, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { DocumentRenderer } from "@/components/DocumentRenderer";
 import { PipelineStages } from "@/components/PipelineStages";
+import { WorkflowNav } from "@/components/WorkflowNav";
 import { useJobStream } from "@/hooks/useJobStream";
 import { getStoredUploadResult } from "@/lib/documents";
 import type { Stage, StageName } from "@/types/api";
@@ -47,13 +48,19 @@ export function DocumentPreviewPage() {
     <div>
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <Link
-            to="/"
-            className="inline-flex items-center gap-1 text-sm text-slate-600 hover:text-brand-600"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Upload another
-          </Link>
+          <WorkflowNav
+            upload={{ to: "/", label: "Upload" }}
+            pipeline={{
+              to: `/documents/${documentId}?job=${jobId ?? ""}`,
+              label: "Pipeline",
+              disabled: !jobId,
+            }}
+            results={{
+              to: jobId ? `/jobs/${jobId}/results` : "#",
+              label: "Results",
+              disabled: !jobId || jobStatus !== "COMPLETED",
+            }}
+          />
           <h1 className="mt-2 text-2xl font-semibold">
             {filename ?? "Document preview"}
           </h1>

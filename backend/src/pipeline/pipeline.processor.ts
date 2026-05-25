@@ -12,8 +12,7 @@ import { EmbedStage } from './stages/embed.stage';
 import { SummarizeStage } from './stages/summarize.stage';
 import { CriticalPointsStage } from './stages/critical-points.stage';
 import { ExtractStage } from './stages/extract.stage';
-
-const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+import { VerifyStage } from './stages/verify.stage';
 
 @Processor(PIPELINE_QUEUE)
 export class PipelineProcessor extends WorkerHost {
@@ -28,6 +27,7 @@ export class PipelineProcessor extends WorkerHost {
     private readonly summarizeStage: SummarizeStage,
     private readonly criticalPointsStage: CriticalPointsStage,
     private readonly extractStage: ExtractStage,
+    private readonly verifyStage: VerifyStage,
   ) {
     super();
   }
@@ -55,9 +55,7 @@ export class PipelineProcessor extends WorkerHost {
       await this.tracker.run(jobId, StageName.SUMMARIZE, () => this.summarizeStage.run(ctx));
       await this.tracker.run(jobId, StageName.CRITICAL_POINTS, () => this.criticalPointsStage.run(ctx));
       await this.tracker.run(jobId, StageName.EXTRACT, () => this.extractStage.run(ctx));
-
-      // VERIFY remains stubbed — completed in commit 10
-      await this.tracker.run(jobId, StageName.VERIFY, async () => { await sleep(300); });
+      await this.tracker.run(jobId, StageName.VERIFY, () => this.verifyStage.run(ctx));
 
       await this.tracker.setJobStatus(jobId, JobStatus.COMPLETED);
     } catch (e) {
