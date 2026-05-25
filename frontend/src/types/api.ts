@@ -3,6 +3,13 @@ export interface UploadResult {
   documentId: string;
 }
 
+export interface ReferenceDocument {
+  id: string;
+  filename: string;
+  createdAt: string;
+  chunkCount: number;
+}
+
 export type StageName =
   | "PARSE"
   | "CHUNK"

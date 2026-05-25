@@ -17,6 +17,8 @@ interface PrismaMock {
       } | null>,
       [unknown]
     >;
+    findMany: jest.Mock;
+    findFirst: jest.Mock;
   };
 }
 
@@ -28,6 +30,8 @@ describe('DocumentsService authorization', () => {
     prisma = {
       document: {
         findUnique: jest.fn(),
+        findMany: jest.fn(),
+        findFirst: jest.fn(),
       },
     };
 
@@ -96,5 +100,25 @@ describe('DocumentsService authorization', () => {
         documentId: 'missing-doc',
       }),
     ).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('lists reference documents with chunk counts', async () => {
+    prisma.document.findMany.mockResolvedValue([
+      {
+        id: 'ref-1',
+        filename: 'reference_document.docx',
+        createdAt: new Date('2026-05-24T00:00:00.000Z'),
+        _count: { chunks: 42 },
+      },
+    ]);
+
+    const refs = await service.listReferences();
+
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toMatchObject({
+      id: 'ref-1',
+      filename: 'reference_document.docx',
+      chunkCount: 42,
+    });
   });
 });

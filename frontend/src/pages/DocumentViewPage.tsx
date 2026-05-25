@@ -166,7 +166,11 @@ export function DocumentViewPage() {
             title="Medication verification"
             description="Compared against the Meridian Bay institutional formulary"
           >
-            <FlaggedIssuesPanel items={job.flagged} jobId={job.id} />
+            <FlaggedIssuesPanel
+              items={job.flagged}
+              jobId={job.id}
+              referenceDocumentId={job.referenceDocumentId}
+            />
           </SectionCard>
 
           <SectionCard

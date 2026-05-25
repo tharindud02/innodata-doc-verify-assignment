@@ -26,6 +26,13 @@ import {
   };
   const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5 MB
   
+  export interface ReferenceListItem {
+    id: string;
+    filename: string;
+    createdAt: Date;
+    chunkCount: number;
+  }
+
   @Injectable()
   export class DocumentsService {
     private readonly logger = new Logger(DocumentsService.name);
@@ -36,6 +43,26 @@ import {
       private readonly parser: DocumentParser,
       private readonly config: ConfigService,
     ) {}
+
+    /** Institutional formulary documents available for verification. */
+    async listReferences(): Promise<ReferenceListItem[]> {
+      const docs = await this.prisma.document.findMany({
+        where: { kind: DocumentKind.REFERENCE },
+        orderBy: { createdAt: 'asc' },
+        select: {
+          id: true,
+          filename: true,
+          createdAt: true,
+          _count: { select: { chunks: true } },
+        },
+      });
+      return docs.map((d) => ({
+        id: d.id,
+        filename: d.filename,
+        createdAt: d.createdAt,
+        chunkCount: d._count.chunks,
+      }));
+    }
   
     /**
      * Handle an upload end-to-end:
@@ -51,8 +78,9 @@ import {
     async ingestUpload(args: {
       userId: string;
       file: Express.Multer.File;
+      referenceDocumentId?: string;
     }): Promise<{ jobId: string; documentId: string }> {
-      const { userId, file } = args;
+      const { userId, file, referenceDocumentId } = args;
       this.validate(file);
   
       const contentHash = this.storage.hash(file.buffer);
@@ -68,16 +96,17 @@ import {
         throw e;
       }
   
-      // Look up the seeded reference document. We support exactly one for now;
-      // adding more is a schema-only change later.
-      const reference = await this.prisma.document.findFirst({
-        where: { kind: DocumentKind.REFERENCE },
-        select: { id: true },
-      });
+      const reference = await this.resolveReferenceDocument(referenceDocumentId);
       if (!reference) {
         await this.storage.tryDelete(relPath);
         throw new InternalServerErrorException(
           'No reference document is configured. Run the seed script.',
+        );
+      }
+      if (reference.chunkCount === 0) {
+        await this.storage.tryDelete(relPath);
+        throw new BadRequestException(
+          `Reference "${reference.filename}" is not indexed yet. Re-run the seed script with --force.`,
         );
       }
 
@@ -93,6 +122,7 @@ import {
         where: {
           userId,
           createdAt: { gte: windowStart },
+          referenceDocumentId: reference.id,
           primaryDocument: { contentHash },
         },
         select: { id: true, primaryDocumentId: true },
@@ -205,6 +235,40 @@ import {
     }
   
     // ──────────────── private helpers ────────────────
+
+    private async resolveReferenceDocument(
+      referenceDocumentId?: string,
+    ): Promise<{ id: string; filename: string; chunkCount: number } | null> {
+      if (referenceDocumentId) {
+        const doc = await this.prisma.document.findFirst({
+          where: { id: referenceDocumentId, kind: DocumentKind.REFERENCE },
+          select: {
+            id: true,
+            filename: true,
+            _count: { select: { chunks: true } },
+          },
+        });
+        if (!doc) {
+          throw new BadRequestException(
+            'Invalid reference document. Choose an institutional formulary from the list.',
+          );
+        }
+        return {
+          id: doc.id,
+          filename: doc.filename,
+          chunkCount: doc._count.chunks,
+        };
+      }
+
+      const refs = await this.listReferences();
+      if (refs.length === 0) return null;
+      const preferred = refs.find((r) => r.chunkCount > 0) ?? refs[0];
+      return {
+        id: preferred.id,
+        filename: preferred.filename,
+        chunkCount: preferred.chunkCount,
+      };
+    }
   
     private validate(file: Express.Multer.File | undefined): void {
       if (!file) throw new BadRequestException('No file uploaded');

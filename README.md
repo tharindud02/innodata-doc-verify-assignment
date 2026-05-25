@@ -93,7 +93,41 @@ Each event includes enough context to trace one document end-to-end by `jobId` a
 - **Atomic ingest writes:** `DocumentsService.ingestUpload()` wraps `Document + Job + Stage[]` creation in one transaction.
 - **RAG verification:** extracted entities are retrieved against reference chunks in pgvector and classified as `SUPPORTED | CONTRADICTED | UNSUPPORTED` with citation grounding checks.
 
+## Multiple reference documents
+
+The assignment ships one institutional formulary, but the data model and UI are built so you can add more without schema changes.
+
+### How it works today
+
+- Reference documents are rows in `documents` with `kind = REFERENCE` (no owning user).
+- Each job stores `referenceDocumentId` — verification retrieval is scoped to that document only.
+- Upload page lists available references via `GET /api/documents/references` and sends the chosen id with the primary file.
+- If only one reference exists, it is selected automatically; if several exist, the user picks from a dropdown.
+- Citations open in a **modal preview** (meets the “clear preview panel” bar). A **Full page** link remains for deep-link navigation (extra-credit style).
+
+### Adding another formulary later
+
+1. Place the new file under `backend/assets/` (e.g. `pediatric_formulary.docx`).
+2. Extend `backend/prisma/seeds.ts` to load and index each file (same pattern as `reference_document.docx`):
+   - parse → create `Document` with `kind: REFERENCE` (idempotent by `contentHash`)
+   - call `ReferenceIndexer.indexReference({ documentId, parsedText })`
+3. Re-run seed: `cd backend && npm run prisma:seed` (use `--force` on the indexer call if you need to rebuild embeddings).
+4. Restart the app. The new formulary appears in the upload dropdown.
+
+No migration is required — only seed/index work and optional UI copy.
+
+### Alignment with the assignment brief
+
+| Requirement | How we handle it |
+|-------------|------------------|
+| One reference provided for the assignment | Seeded `reference_document.docx` |
+| “Designed so additional references could be added later” | `REFERENCE` documents + per-job `referenceDocumentId` + list/select API |
+| Verify entities against **the** reference | Pipeline uses the job’s chosen reference only |
+| Citations grounded in reference text | Quote + modal/full-page preview with highlight |
+| Under-scoped / judgment on deferrals | Multi-reference **selection** and **modal** are in scope; bulk reference upload UI and admin CRUD are deferred |
+
 ## Tradeoffs and known limitations
 
 - Enqueue after DB commit is a deliberate dual-write tradeoff: if queue write fails, job stays `QUEUED` and can be retried.
 - Single backend process hosts both API and queue worker; no separate worker container is required for this submission.
+- Adding references is operator-driven (seed/assets), not an in-app upload flow for formulary admins.

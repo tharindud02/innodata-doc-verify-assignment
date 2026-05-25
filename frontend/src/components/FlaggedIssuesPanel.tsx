@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router";
 import type { FlaggedEntity, FlagStatus } from "@/types/api";
+import { ReferencePreviewModal } from "@/components/ReferencePreviewModal";
 import {
   formatPrescription,
   formatPrescriptionSubtitle,
@@ -57,11 +58,16 @@ const FILTERS: { key: FilterKey; label: string }[] = [
 export function FlaggedIssuesPanel({
   items,
   jobId,
+  referenceDocumentId,
+  referenceFilename,
 }: {
   items: FlaggedEntity[];
   jobId: string;
+  referenceDocumentId: string;
+  referenceFilename?: string;
 }) {
   const [filter, setFilter] = useState<FilterKey>("all");
+  const [previewItem, setPreviewItem] = useState<FlaggedEntity | null>(null);
 
   const sorted = useMemo(() => {
     return [...items].sort((a, b) => {
@@ -135,10 +141,23 @@ export function FlaggedIssuesPanel({
       ) : (
         <div className="space-y-2">
           {filtered.map((it) => (
-            <FlaggedRow key={it.entity.id} item={it} jobId={jobId} />
+            <FlaggedRow
+              key={it.entity.id}
+              item={it}
+              jobId={jobId}
+              onViewReference={() => setPreviewItem(it)}
+            />
           ))}
         </div>
       )}
+
+      <ReferencePreviewModal
+        open={previewItem !== null}
+        onClose={() => setPreviewItem(null)}
+        referenceDocumentId={referenceDocumentId}
+        referenceFilename={referenceFilename}
+        flagged={previewItem}
+      />
     </div>
   );
 }
@@ -146,9 +165,11 @@ export function FlaggedIssuesPanel({
 function FlaggedRow({
   item,
   jobId,
+  onViewReference,
 }: {
   item: FlaggedEntity;
   jobId: string;
+  onViewReference: () => void;
 }) {
   const status = item.flag?.status ?? "UNSUPPORTED";
   const meta = STATUS_META[status];
@@ -232,13 +253,22 @@ function FlaggedRow({
                   )}
                 </p>
                 {showReferenceLink && (
-                  <Link
-                    to={`/reference/${jobId}?chunk=${item.flag!.citationChunkId}`}
-                    className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
-                  >
-                    <ExternalLink className="h-3.5 w-3.5" />
-                    View in reference
-                  </Link>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      type="button"
+                      onClick={onViewReference}
+                      className="inline-flex items-center gap-1.5 rounded-md bg-brand-600 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-brand-700"
+                    >
+                      View citation
+                    </button>
+                    <Link
+                      to={`/reference/${jobId}?chunk=${item.flag!.citationChunkId}`}
+                      className="inline-flex items-center gap-1.5 rounded-md border border-slate-300 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
+                    >
+                      <ExternalLink className="h-3.5 w-3.5" />
+                      Full page
+                    </Link>
+                  </div>
                 )}
               </div>
               <blockquote className="border-l-4 border-brand-400 pl-4 text-sm italic text-slate-700">
