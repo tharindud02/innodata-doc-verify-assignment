@@ -385,25 +385,6 @@ The repo ships one institutional formulary by default; the schema and UI support
 
 ---
 
-## Extra credit attempted
-
-| Feature | Status | Notes |
-|---------|--------|-------|
-| **Deep-link citations** | Done | Flagged issue → modal or `/reference/:jobId` with `highlightCitationInElement` on formulary HTML |
-| **Duplicate upload detection** | Done | SHA-256 `contentHash`; same user + reference within `DEDUP_WINDOW_MS` (default 5 min) returns existing job |
-| **Multiple references** | Done | Schema + API + UI dropdown; seed path documented above |
-
-### With more time
-
-- Separate BullMQ worker container in `docker-compose.yml`
-- In-app reference upload / admin indexing (today: seed/assets only)
-- Formal retrieval benchmark suite in CI
-- PDF page numbers on citations (DOCX preview lacks stable pages today)
-- Broader e2e tests (upload → pipeline → results)
-- Password strength policy and rate limiting on auth
-
----
-
 ## Logging and traceability
 
 Structured JSON logs per pipeline path:
@@ -434,43 +415,3 @@ Coverage focus:
 
 Broad coverage was intentionally deferred given the 3-day budget; these tests demonstrate correctness thinking on the highest-risk paths.
 
----
-
-## Backend API reference
-
-Swagger UI: `/api/docs`.
-
-- Public: `POST /api/auth/login`, `POST /api/auth/signup`
-- Protected (JWT): all `documents` and `jobs` endpoints
-
-In Swagger: login → copy `token` → **Authorize** → `Bearer <token>`.
-
----
-
-## Tradeoffs and known limitations
-
-- **Worker colocation:** API and BullMQ worker run in one backend process (no separate worker service in compose).
-- **Enqueue after commit:** Queue failure leaves job `QUEUED` in DB without a running worker job until retried.
-- **Reference indexing:** New formulary via seed/assets only, not end-user upload.
-- **Embedding model:** General-purpose MiniLM, not clinical-tuned.
-- **Page-level citations:** DOCX-derived HTML preview; `sourcePage` often null for critical points/entities.
-- **Parse dependency:** Upload requires successful parse before DB transaction; very large or malformed files fail early with cleanup.
-
----
-
-## Local development (without Docker)
-
-```bash
-# Terminal 1 — infrastructure
-docker compose up postgres redis
-
-# Terminal 2 — backend
-cd backend && npm install && cp ../.env .env
-npx prisma migrate deploy && npm run prisma:seed
-npm run start:dev
-
-# Terminal 3 — frontend
-cd frontend && npm install && npm run dev
-```
-
-Requires Node 20+, same `.env` keys as Docker.
