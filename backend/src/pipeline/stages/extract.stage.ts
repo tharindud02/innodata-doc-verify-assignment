@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { PrismaService } from '../../prisma/prisma.service';
 import { LlmService } from '../../llm/llm.service';
 import { PipelineContext } from '../pipeline.context';
+import { structuredLog } from '../../common/structured-log';
 
 // ─────────────────────────────────────────────────────────────
 // Output schema
@@ -71,7 +72,14 @@ export class ExtractStage {
     // Idempotency
     const existing = await this.prisma.entity.count({ where: { jobId: ctx.jobId } });
     if (existing > 0) {
-      this.logger.log(`EXTRACT skipped: ${existing} entities already exist`);
+      this.logger.log(
+        structuredLog('pipeline.extraction.skipped', {
+          jobId: ctx.jobId,
+          primaryDocumentId: ctx.primaryDocumentId,
+          reason: 'entities_already_exist',
+          entityCount: existing,
+        }),
+      );
       return;
     }
 
@@ -99,7 +107,12 @@ export class ExtractStage {
 
     if (valid.length === 0) {
       this.logger.warn(
-        `EXTRACT produced 0 medications for job=${ctx.jobId} — verification will be a no-op`,
+        structuredLog('pipeline.extraction.completed', {
+          jobId: ctx.jobId,
+          primaryDocumentId: ctx.primaryDocumentId,
+          extractedCount: 0,
+          rawCount: parsed.data.medications.length,
+        }),
       );
       return;
     }
@@ -119,7 +132,13 @@ export class ExtractStage {
     });
 
     this.logger.log(
-      `EXTRACT wrote ${valid.length} medications (raw=${parsed.data.medications.length}) for job=${ctx.jobId}: ${valid.map((m) => m.drug_name).join(', ')}`,
+      structuredLog('pipeline.extraction.completed', {
+        jobId: ctx.jobId,
+        primaryDocumentId: ctx.primaryDocumentId,
+        extractedCount: valid.length,
+        rawCount: parsed.data.medications.length,
+        medications: valid.map((m) => m.drug_name).join(', '),
+      }),
     );
   }
 

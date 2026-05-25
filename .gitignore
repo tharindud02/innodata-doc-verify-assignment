@@ -12,6 +12,7 @@ frontend/.env
 .vscode/
 .idea/
 *.md
+!README.md
 
 # Docker
 *.pid

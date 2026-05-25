@@ -8,6 +8,7 @@ import {
   RetrievedChunk,
 } from '../../rag/retrieval.service';
 import { PipelineContext } from '../pipeline.context';
+import { structuredLog } from '../../common/structured-log';
 
 // ─────────────────────────────────────────────────────────────
 // Tunable: cosine-distance ceiling for "the reference even has a relevant
@@ -82,7 +83,14 @@ export class VerifyStage {
     });
 
     if (entities.length === 0) {
-      this.logger.warn(`VERIFY: no entities to verify for job=${ctx.jobId}`);
+      this.logger.warn(
+        structuredLog('pipeline.verification.skipped', {
+          jobId: ctx.jobId,
+          primaryDocumentId: ctx.primaryDocumentId,
+          referenceDocumentId: ctx.referenceDocumentId,
+          reason: 'no_entities',
+        }),
+      );
       return;
     }
 
@@ -109,7 +117,12 @@ export class VerifyStage {
         // than no verification at all.
         const message = (e as Error).message ?? 'Unknown error';
         this.logger.error(
-          `VERIFY failed for ${entity.drugName}: ${message}`,
+          structuredLog('pipeline.verification.entity_failed', {
+            jobId: ctx.jobId,
+            entityId: entity.id,
+            drugName: entity.drugName,
+            error: message,
+          }),
         );
         await this.persistFlag(entity.id, {
           status: FlagStatus.UNSUPPORTED,
@@ -124,7 +137,15 @@ export class VerifyStage {
     }
 
     this.logger.log(
-      `VERIFY complete for job=${ctx.jobId}: ${supported} supported, ${contradicted} contradicted, ${unsupported} unsupported`,
+      structuredLog('pipeline.verification.completed', {
+        jobId: ctx.jobId,
+        primaryDocumentId: ctx.primaryDocumentId,
+        referenceDocumentId: ctx.referenceDocumentId,
+        entityCount: entities.length,
+        supportedCount: supported,
+        contradictedCount: contradicted,
+        unsupportedCount: unsupported,
+      }),
     );
   }
 
@@ -148,7 +169,14 @@ export class VerifyStage {
     if (chunks.length === 0 || chunks[0].distance > RELEVANCE_DISTANCE_THRESHOLD) {
       const topDist = chunks[0]?.distance.toFixed(3) ?? 'n/a';
       this.logger.log(
-        `VERIFY ${entity.drugName}: UNSUPPORTED via relevance gate (top distance=${topDist} > ${RELEVANCE_DISTANCE_THRESHOLD})`,
+        structuredLog('pipeline.verification.entity_relevance_gated', {
+          jobId: ctx.jobId,
+          entityId: entity.id,
+          drugName: entity.drugName,
+          topDistance: topDist,
+          threshold: RELEVANCE_DISTANCE_THRESHOLD,
+          verdict: FlagStatus.UNSUPPORTED,
+        }),
       );
       return {
         status: FlagStatus.UNSUPPORTED,
@@ -189,7 +217,14 @@ export class VerifyStage {
         citationText = out.citation_quote.trim();
       } else if (out.status === 'CONTRADICTED') {
         this.logger.warn(
-          `VERIFY ${entity.drugName}: CONTRADICTED but citation quote not grounded — downgrading to UNSUPPORTED`,
+          structuredLog('pipeline.verification.entity_downgraded', {
+            jobId: ctx.jobId,
+            entityId: entity.id,
+            drugName: entity.drugName,
+            reason: 'citation_not_grounded',
+            initialVerdict: 'CONTRADICTED',
+            finalVerdict: FlagStatus.UNSUPPORTED,
+          }),
         );
         return {
           status: FlagStatus.UNSUPPORTED,
@@ -203,7 +238,15 @@ export class VerifyStage {
     }
 
     this.logger.log(
-      `VERIFY ${entity.drugName}: ${out.status} (top chunk=${chunks[0].monograph}, dist=${chunks[0].distance.toFixed(3)})`,
+      structuredLog('pipeline.verification.entity_completed', {
+        jobId: ctx.jobId,
+        entityId: entity.id,
+        drugName: entity.drugName,
+        verdict: out.status,
+        topMonograph: chunks[0].monograph ?? null,
+        topDistance: Number(chunks[0].distance.toFixed(3)),
+        citationGrounded: Boolean(citationChunk),
+      }),
     );
 
     return {

@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { StageName, StageStatus, JobStatus } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
+import { structuredLog } from '../common/structured-log';
 
 @Injectable()
 export class StageTracker {
@@ -25,6 +26,12 @@ export class StageTracker {
       where: { jobId_name: { jobId, name } },
       data: { status: StageStatus.RUNNING, startedAt: new Date(), error: null },
     });
+    this.logger.log(
+      structuredLog('pipeline.stage.started', {
+        jobId,
+        stage: name,
+      }),
+    );
 
     const startNs = process.hrtime.bigint();
     try {
@@ -35,7 +42,11 @@ export class StageTracker {
         data: { status: StageStatus.DONE, endedAt: new Date() },
       });
       this.logger.log(
-        `Stage ${name} DONE (job=${jobId} ${durMs.toFixed(0)}ms)`,
+        structuredLog('pipeline.stage.completed', {
+          jobId,
+          stage: name,
+          durationMs: Number(durMs.toFixed(0)),
+        }),
       );
       return result;
     } catch (e) {
@@ -48,7 +59,13 @@ export class StageTracker {
           error: message.slice(0, 1000),
         },
       });
-      this.logger.error(`Stage ${name} FAILED (job=${jobId}): ${message}`);
+      this.logger.error(
+        structuredLog('pipeline.stage.failed', {
+          jobId,
+          stage: name,
+          error: message,
+        }),
+      );
       throw e;
     }
   }
@@ -71,5 +88,12 @@ export class StageTracker {
         errorMessage: errorMessage ?? null,
       },
     });
+    this.logger.log(
+      structuredLog('pipeline.job.status_updated', {
+        jobId,
+        status,
+        error: errorMessage ?? null,
+      }),
+    );
   }
 }
