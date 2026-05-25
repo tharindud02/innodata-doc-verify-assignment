@@ -13,6 +13,7 @@ import { SummarizeStage } from './stages/summarize.stage';
 import { CriticalPointsStage } from './stages/critical-points.stage';
 import { ExtractStage } from './stages/extract.stage';
 import { VerifyStage } from './stages/verify.stage';
+import { structuredLog } from '../common/structured-log';
 
 @Processor(PIPELINE_QUEUE)
 export class PipelineProcessor extends WorkerHost {
@@ -34,7 +35,12 @@ export class PipelineProcessor extends WorkerHost {
 
   async process(job: Job<PipelineJobData>): Promise<void> {
     const { jobId } = job.data;
-    this.logger.log(`Picked up job ${jobId} (bullmq id=${job.id})`);
+    this.logger.log(
+      structuredLog('pipeline.job.picked_up', {
+        jobId,
+        queueJobId: String(job.id ?? ''),
+      }),
+    );
 
     const dbJob = await this.prisma.job.findUniqueOrThrow({
       where: { id: jobId },
@@ -58,9 +64,26 @@ export class PipelineProcessor extends WorkerHost {
       await this.tracker.run(jobId, StageName.VERIFY, () => this.verifyStage.run(ctx));
 
       await this.tracker.setJobStatus(jobId, JobStatus.COMPLETED);
+      this.logger.log(
+        structuredLog('pipeline.job.completed', {
+          jobId,
+          userId: ctx.userId,
+          primaryDocumentId: ctx.primaryDocumentId,
+          referenceDocumentId: ctx.referenceDocumentId,
+        }),
+      );
     } catch (e) {
       const message = (e as Error).message ?? 'Unknown error';
       await this.tracker.setJobStatus(jobId, JobStatus.FAILED, message);
+      this.logger.error(
+        structuredLog('pipeline.job.failed', {
+          jobId,
+          userId: ctx.userId,
+          primaryDocumentId: ctx.primaryDocumentId,
+          referenceDocumentId: ctx.referenceDocumentId,
+          error: message,
+        }),
+      );
       throw e;
     }
   }
@@ -68,7 +91,11 @@ export class PipelineProcessor extends WorkerHost {
   @OnWorkerEvent('failed')
   onFailed(job: Job<PipelineJobData>, err: Error) {
     this.logger.error(
-      `BullMQ job ${job.id} (app jobId=${job.data?.jobId}) failed: ${err.message}`,
+      structuredLog('pipeline.queue.failed', {
+        queueJobId: String(job.id ?? ''),
+        jobId: job.data?.jobId ?? null,
+        error: err.message,
+      }),
     );
   }
 }

@@ -13,6 +13,7 @@ import {
   import { FileStorage } from '../common/file-storage';
   import { DocumentParser } from './document-parser.service';
   import { PIPELINE_STAGES } from '../pipeline/pipeline.constants';
+  import { structuredLog } from '../common/structured-log';
   
   const ACCEPTED_MIME = new Set([
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
@@ -130,7 +131,12 @@ import {
       if (existingJob) {
         await this.storage.tryDelete(relPath);
         this.logger.log(
-          `Deduped upload: user=${userId} job=${existingJob.id} hash=${contentHash.slice(0, 8)}`,
+          structuredLog('pipeline.ingestion.deduped', {
+            userId,
+            jobId: existingJob.id,
+            primaryDocumentId: existingJob.primaryDocumentId,
+            contentHashPrefix: contentHash.slice(0, 8),
+          }),
         );
         return {
           jobId: existingJob.id,
@@ -181,14 +187,24 @@ import {
         );
   
         this.logger.log(
-          `Upload accepted: user=${userId} doc=${documentId} job=${jobId} hash=${contentHash.slice(0, 8)}`,
+          structuredLog('pipeline.ingestion.accepted', {
+            userId,
+            jobId,
+            primaryDocumentId: documentId,
+            referenceDocumentId: reference.id,
+            contentHashPrefix: contentHash.slice(0, 8),
+          }),
         );
         return { jobId, documentId };
       } catch (e) {
         // Transaction rolled back — clean up the file too
         await this.storage.tryDelete(relPath);
         this.logger.error(
-          `Upload transaction failed for user=${userId}: ${(e as Error).message}`,
+          structuredLog('pipeline.ingestion.failed', {
+            userId,
+            contentHashPrefix: contentHash.slice(0, 8),
+            error: (e as Error).message,
+          }),
         );
         throw e;
       }
