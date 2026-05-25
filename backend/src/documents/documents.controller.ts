@@ -9,12 +9,23 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
+import {
+  ApiBearerAuth,
+  ApiBody,
+  ApiConsumes,
+  ApiOkResponse,
+  ApiOperation,
+  ApiParam,
+  ApiTags,
+} from '@nestjs/swagger';
 import * as currentUserDecorator from '../auth/decorators/current-user.decorator';
 import { DocumentsService } from './documents.service';
 import { UploadResultDto } from './dto/upload-result.dto';
 import { ReferenceListItemDto } from './dto/reference-list-item.dto';
 import { PipelineQueueService } from '../jobs/pipeline-queue.service';
 
+@ApiTags('documents')
+@ApiBearerAuth('jwt')
 @Controller('documents')
 export class DocumentsController {
   private readonly logger = new Logger(DocumentsController.name);
@@ -25,6 +36,8 @@ export class DocumentsController {
   ) {}
 
   @Get('references')
+  @ApiOperation({ summary: 'List available institutional reference documents' })
+  @ApiOkResponse({ type: ReferenceListItemDto, isArray: true })
   async listReferences(): Promise<ReferenceListItemDto[]> {
     const refs = await this.documents.listReferences();
     return refs.map((r) => ({
@@ -36,6 +49,25 @@ export class DocumentsController {
   }
 
   @Post('upload')
+  @ApiOperation({
+    summary: 'Upload primary document and enqueue async verification pipeline',
+  })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({
+    schema: {
+      type: 'object',
+      properties: {
+        file: { type: 'string', format: 'binary' },
+        referenceDocumentId: {
+          type: 'string',
+          nullable: true,
+          description: 'Optional reference document ID; defaults to seeded formulary',
+        },
+      },
+      required: ['file'],
+    },
+  })
+  @ApiOkResponse({ type: UploadResultDto })
   @UseInterceptors(
     FileInterceptor('file', { limits: { fileSize: 15 * 1024 * 1024 } }),
   )
@@ -67,6 +99,14 @@ export class DocumentsController {
   }
 
   @Get(':id/preview')
+  @ApiOperation({ summary: 'Get sanitized HTML preview for a document' })
+  @ApiParam({ name: 'id', description: 'Document ID' })
+  @ApiOkResponse({
+    schema: {
+      type: 'object',
+      properties: { html: { type: 'string' } },
+    },
+  })
   async preview(
     @currentUserDecorator.CurrentUser() user: currentUserDecorator.AuthUser,
     @Param('id') id: string,
