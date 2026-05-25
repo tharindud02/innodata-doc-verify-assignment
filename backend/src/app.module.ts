@@ -18,7 +18,7 @@ import { PipelineModule } from './pipeline/pipeline.module';
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
-      envFilePath: ['.env', '../.env'],
+      envFilePath: ['../.env'],
       validationSchema: Joi.object({
         DATABASE_URL: Joi.string().required(),
         JWT_SECRET: Joi.string().min(16).required(),

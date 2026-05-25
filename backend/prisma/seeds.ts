@@ -42,8 +42,8 @@ async function main() {
     const indexer = app.get(ReferenceIndexer);
 
     // ── 1. Demo user ────────────────────────────────────────────────────────
-    const email = config.get<string>('SEED_USER_EMAIL', 'demo@meridianbay.test');
-    const password = config.get<string>('SEED_USER_PASSWORD', 'demo1234');
+    const email = config.get<string>('SEED_USER_EMAIL', 'tharindud02@gmail.com');
+    const password = config.get<string>('SEED_USER_PASSWORD', 'tharindu1234');
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       logger.log(`Demo user already exists: ${email}`);
