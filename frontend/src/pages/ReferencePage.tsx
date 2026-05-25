@@ -1,109 +1,12 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
 import { AlertCircle, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { fetchDocumentPreview } from "@/lib/documents";
 import { getApiErrorMessage } from "@/lib/api-error";
+import { highlightCitationInElement } from "@/lib/citation-highlight";
 import type { JobDetail } from "@/types/api";
 import { WorkflowNav } from "@/components/WorkflowNav";
-
-type TextNodeSlice = { node: Text; start: number; end: number };
-
-function escapeRegex(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-function clearHighlights(root: HTMLElement): void {
-  const marks = Array.from(
-    root.querySelectorAll("mark[data-citation-highlight='true']")
-  );
-  for (const mark of marks) {
-    const parent = mark.parentNode;
-    if (!parent) continue;
-    while (mark.firstChild) {
-      parent.insertBefore(mark.firstChild, mark);
-    }
-    parent.removeChild(mark);
-    parent.normalize();
-  }
-}
-
-function collectTextNodeSlices(root: HTMLElement): {
-  text: string;
-  slices: TextNodeSlice[];
-} {
-  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
-  const slices: TextNodeSlice[] = [];
-  let fullText = "";
-  let node = walker.nextNode() as Text | null;
-  while (node) {
-    const value = node.textContent ?? "";
-    if (value.length > 0) {
-      const start = fullText.length;
-      fullText += value;
-      slices.push({ node, start, end: start + value.length });
-    }
-    node = walker.nextNode() as Text | null;
-  }
-  return { text: fullText, slices };
-}
-
-function findCitationRange(text: string, citation: string): [number, number] | null {
-  const trimmed = citation.trim();
-  if (!trimmed) return null;
-  const whitespaceAgnostic = escapeRegex(trimmed).replace(/\s+/g, "\\s+");
-  const pattern = new RegExp(whitespaceAgnostic, "i");
-  const match = pattern.exec(text);
-  if (match?.index != null) {
-    return [match.index, match.index + match[0].length];
-  }
-
-  const firstSentence = trimmed.split(/[.!?]/)[0]?.trim() ?? "";
-  if (firstSentence.length >= 20) {
-    const shortPattern = new RegExp(
-      escapeRegex(firstSentence).replace(/\s+/g, "\\s+"),
-      "i"
-    );
-    const shortMatch = shortPattern.exec(text);
-    if (shortMatch?.index != null) {
-      return [shortMatch.index, shortMatch.index + shortMatch[0].length];
-    }
-  }
-  return null;
-}
-
-function applyHighlight(
-  root: HTMLElement,
-  slices: TextNodeSlice[],
-  matchStart: number,
-  matchEnd: number
-): HTMLElement | null {
-  const targets = slices.filter((slice) => matchStart < slice.end && matchEnd > slice.start);
-  if (targets.length === 0) return null;
-  let firstMark: HTMLElement | null = null;
-
-  for (let i = targets.length - 1; i >= 0; i -= 1) {
-    const target = targets[i];
-    const startOffset = Math.max(0, matchStart - target.start);
-    const endOffset = Math.min(target.end - target.start, matchEnd - target.start);
-    if (startOffset >= endOffset) continue;
-    const range = document.createRange();
-    range.setStart(target.node, startOffset);
-    range.setEnd(target.node, endOffset);
-    const mark = document.createElement("mark");
-    mark.dataset.citationHighlight = "true";
-    mark.className = "rounded bg-yellow-200/90 px-0.5";
-    range.surroundContents(mark);
-    firstMark = mark;
-  }
-
-  if (firstMark) {
-    firstMark.scrollIntoView({ behavior: "smooth", block: "center" });
-  } else {
-    root.scrollTo({ top: 0, behavior: "smooth" });
-  }
-  return firstMark;
-}
 
 export function ReferencePage() {
   const { jobId } = useParams();
@@ -146,33 +49,33 @@ export function ReferencePage() {
     };
   }, [job?.referenceDocumentId]);
 
-  useEffect(() => {
-    if (!html || !contentRef.current || !chunkId || !job) {
+  // Set HTML imperatively so React re-renders don't wipe <mark> highlights.
+  useLayoutEffect(() => {
+    if (!contentRef.current || !html) return;
+    contentRef.current.innerHTML = html;
+  }, [html]);
+
+  useLayoutEffect(() => {
+    const root = contentRef.current;
+    if (!root || !html || !chunkId || !job) {
       setHighlightFound(null);
       return;
     }
 
     const flagged = job.flagged.find((f) => f.flag?.citationChunkId === chunkId);
-    const citationText = flagged?.flag?.citationText;
-    if (!citationText) {
+    const flag = flagged?.flag;
+    if (!flag?.citationText) {
       setHighlightFound(null);
       return;
     }
 
-    const timer = window.setTimeout(() => {
-      if (!contentRef.current) return;
-      clearHighlights(contentRef.current);
-      const { text, slices } = collectTextNodeSlices(contentRef.current);
-      const range = findCitationRange(text, citationText);
-      if (!range) {
-        setHighlightFound(false);
-        return;
-      }
-      const firstMark = applyHighlight(contentRef.current, slices, range[0], range[1]);
-      setHighlightFound(Boolean(firstMark));
-    }, 30);
+    const phrases = [
+      flag.citationText,
+      flag.citationMonograph ?? "",
+    ].filter((p) => p.trim().length > 0);
 
-    return () => window.clearTimeout(timer);
+    const found = highlightCitationInElement(root, phrases);
+    setHighlightFound(found);
   }, [html, chunkId, job]);
 
   const selectedFlag = useMemo(() => {
@@ -199,7 +102,7 @@ export function ReferencePage() {
           label: "Pipeline",
         }}
         results={{ to: `/jobs/${job.id}/results`, label: "Results" }}
-        reference={{ to: `/reference/${job.id}`, label: "Reference", active: true }}
+        reference={{ to: `/reference/${job.id}`, label: "Reference" }}
       />
       <h1 className="text-2xl font-semibold">Institutional formulary</h1>
 
@@ -236,7 +139,6 @@ export function ReferencePage() {
       <div
         ref={contentRef}
         className="max-h-[80vh] overflow-y-auto rounded-lg border bg-white p-6 text-sm leading-relaxed shadow-sm"
-        dangerouslySetInnerHTML={{ __html: html }}
       />
     </div>
   );

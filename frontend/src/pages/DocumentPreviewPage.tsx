@@ -53,7 +53,6 @@ export function DocumentPreviewPage() {
             pipeline={{
               to: `/documents/${documentId}?job=${jobId ?? ""}`,
               label: "Pipeline",
-              active: true,
               disabled: !jobId,
             }}
             results={{

@@ -73,6 +73,19 @@ export function DocumentViewPage() {
   if (!job) {
     return (
       <div className="space-y-4">
+        <WorkflowNav
+          upload={{ to: "/", label: "Upload" }}
+          pipeline={{
+            to: jobId ? `/jobs/${jobId}` : "#",
+            label: "Pipeline",
+            disabled: !jobId,
+          }}
+          results={{
+            to: jobId ? `/jobs/${jobId}/results` : "#",
+            label: "Results",
+            disabled: !jobId,
+          }}
+        />
         <div className="flex items-center gap-2 text-slate-500">
           <Loader2 className="h-5 w-5 animate-spin" />
           Loading verification results…
@@ -102,7 +115,6 @@ export function DocumentViewPage() {
           results={{
             to: `/jobs/${job.id}/results`,
             label: "Results",
-            active: true,
           }}
         />
 

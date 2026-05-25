@@ -1,12 +1,23 @@
-import { Link } from "react-router";
-import { Upload, ListChecks, FileText, BookOpen } from "lucide-react";
+import type { ReactNode } from "react";
+import { Link, useLocation } from "react-router";
+import { Upload, ListChecks, FileText, BookOpen, ChevronRight } from "lucide-react";
 
 type NavItem = {
   to: string;
   label: string;
-  active?: boolean;
   disabled?: boolean;
 };
+
+type StepKey = "upload" | "pipeline" | "results" | "reference";
+
+function getCurrentStep(pathname: string): StepKey {
+  if (pathname === "/") return "upload";
+  if (/^\/reference\//.test(pathname)) return "reference";
+  if (/^\/jobs\/[^/]+\/results/.test(pathname)) return "results";
+  if (/^\/documents\//.test(pathname)) return "pipeline";
+  if (/^\/jobs\/[^/]+$/.test(pathname)) return "pipeline";
+  return "upload";
+}
 
 export function WorkflowNav({
   upload,
@@ -19,43 +30,72 @@ export function WorkflowNav({
   results?: NavItem;
   reference?: NavItem;
 }) {
-  const items = [
-    { ...upload, icon: Upload },
-    pipeline ? { ...pipeline, icon: ListChecks } : null,
-    results ? { ...results, icon: FileText } : null,
-    reference ? { ...reference, icon: BookOpen } : null,
-  ].filter(Boolean) as Array<NavItem & { icon: typeof Upload }>;
+  const { pathname } = useLocation();
+  const currentStep = getCurrentStep(pathname);
+
+  const items: Array<{ key: StepKey; item: NavItem; icon: typeof Upload }> = [
+    { key: "upload", item: upload, icon: Upload },
+    ...(pipeline ? [{ key: "pipeline" as const, item: pipeline, icon: ListChecks }] : []),
+    ...(results ? [{ key: "results" as const, item: results, icon: FileText }] : []),
+    ...(reference ? [{ key: "reference" as const, item: reference, icon: BookOpen }] : []),
+  ];
 
   return (
-    <nav className="flex flex-wrap items-center gap-2" aria-label="Workflow">
-      {items.map((item) => {
-        const classes = item.active
-          ? "bg-brand-600 text-white border-brand-600"
-          : item.disabled
-            ? "cursor-not-allowed border-slate-200 bg-slate-100 text-slate-400"
-            : "border-slate-200 bg-white text-slate-600 hover:bg-slate-50";
+    <nav
+      className="flex flex-wrap items-center gap-1 text-sm"
+      aria-label="Workflow"
+    >
+      {items.map(({ key, item, icon: Icon }, index) => {
+        const isCurrent = key === currentStep && !item.disabled;
+        const isDisabled = item.disabled ?? false;
 
-        if (item.disabled) {
-          return (
+        const content = (
+          <>
+            <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            <span>{item.label}</span>
+          </>
+        );
+
+        let step: ReactNode;
+        if (isCurrent) {
+          step = (
             <span
-              key={item.label}
-              className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium ${classes}`}
+              className="inline-flex items-center gap-1.5 font-medium text-brand-700"
+              aria-current="step"
             >
-              <item.icon className="h-3.5 w-3.5" />
-              {item.label}
+              {content}
             </span>
+          );
+        } else if (isDisabled) {
+          step = (
+            <span
+              className="inline-flex cursor-not-allowed items-center gap-1.5 text-slate-400"
+              aria-disabled="true"
+            >
+              {content}
+            </span>
+          );
+        } else {
+          step = (
+            <Link
+              to={item.to}
+              className="inline-flex items-center gap-1.5 text-slate-500 transition hover:text-brand-600"
+            >
+              {content}
+            </Link>
           );
         }
 
         return (
-          <Link
-            key={item.label}
-            to={item.to}
-            className={`inline-flex items-center gap-1.5 rounded-md border px-3 py-1.5 text-xs font-medium transition ${classes}`}
-          >
-            <item.icon className="h-3.5 w-3.5" />
-            {item.label}
-          </Link>
+          <span key={item.label} className="inline-flex items-center gap-1">
+            {index > 0 && (
+              <ChevronRight
+                className="h-3.5 w-3.5 shrink-0 text-slate-300"
+                aria-hidden
+              />
+            )}
+            {step}
+          </span>
         );
       })}
     </nav>

@@ -6,6 +6,7 @@ import { getApiErrorMessage } from "@/lib/api-error";
 import { storeUploadResult, uploadDocument } from "@/lib/documents";
 import { fetchUserJobs } from "@/lib/jobs";
 import { WorkflowNav } from "@/components/WorkflowNav";
+import { JobStatusBadge } from "@/components/JobStatusBadge";
 import type { JobListItem } from "@/types/api";
 
 const ACCEPTED = {
@@ -74,7 +75,11 @@ export function UploadPage() {
 
   return (
     <div className="mx-auto max-w-2xl">
-      <WorkflowNav upload={{ to: "/", label: "Upload", active: true }} />
+      <WorkflowNav
+        upload={{ to: "/", label: "Upload" }}
+        pipeline={{ to: "#", label: "Pipeline", disabled: true }}
+        results={{ to: "#", label: "Results", disabled: true }}
+      />
       <h1 className="mb-2 text-2xl font-semibold">Verify a document</h1>
       <p className="mb-6 text-slate-600">
         Upload a discharge summary or prescription. We&apos;ll verify it against
@@ -146,9 +151,7 @@ export function UploadPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-3">
-                    <span className="text-xs font-medium uppercase text-slate-500">
-                      {job.status}
-                    </span>
+                    <JobStatusBadge status={job.status} />
                     <Link
                       to={`/documents/${job.documentId}?job=${job.id}`}
                       className="text-xs font-medium text-brand-600 hover:text-brand-700"

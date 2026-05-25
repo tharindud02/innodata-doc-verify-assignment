@@ -15,10 +15,10 @@ export function TopBar() {
         <div className="flex items-center gap-3 text-sm text-slate-600">
           <Link
             to="/"
-            className="inline-flex items-center gap-1 rounded-md border border-slate-200 px-3 py-1 hover:bg-slate-50"
+            className="inline-flex items-center gap-1 text-slate-600 hover:text-brand-600"
           >
             <Upload className="h-4 w-4" />
-            Upload
+            New upload
           </Link>
           <span>{email}</span>
           <button
