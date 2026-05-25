@@ -17,7 +17,7 @@ export class AuthController {
     schema: {
       example: {
         token: '<jwt-token>',
-        user: { id: 'clx...', email: 'demo@meridianbay.test' },
+        user: { id: 'clx...', email: 'tharindud02@gmail.com' },
       },
     },
   })
@@ -35,7 +35,7 @@ export class AuthController {
     schema: {
       example: {
         token: '<jwt-token>',
-        user: { id: 'clx...', email: 'demo@meridianbay.test' },
+        user: { id: 'clx...', email: 'tharindud02@gmail.com' },
       },
     },
   })

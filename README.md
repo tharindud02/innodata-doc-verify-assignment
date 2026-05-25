@@ -37,31 +37,14 @@ The seed script parses and indexes the reference on first startup.
 
 ### Environment
 
-Create `.env` in the repository root:
+Use one root env file only (no per-service env files):
 
-```env
-POSTGRES_USER=docverify
-POSTGRES_PASSWORD=docverify_dev
-POSTGRES_DB=docverify
-JWT_SECRET=change-me-min-16-chars
-LLM_PROVIDER=anthropic
-ANTHROPIC_API_KEY=your-real-key
+```bash
+cp .env.example .env
+# PowerShell: Copy-Item .env.example .env
 ```
 
-For OpenAI:
-
-```env
-LLM_PROVIDER=openai
-OPENAI_API_KEY=your-real-key
-```
-
-Optional:
-
-```env
-DEDUP_WINDOW_MS=300000   # duplicate upload window (default 5 min)
-SEED_USER_EMAIL=demo@meridianbay.test
-SEED_USER_PASSWORD=demo1234
-```
+Edit `.env` and set your API key (`OPENAI_API_KEY` or `ANTHROPIC_API_KEY`).
 
 ### Run the stack
 
@@ -78,8 +61,8 @@ On startup the stack:
 
 ### Demo login
 
-- **Email:** `demo@meridianbay.test`
-- **Password:** `demo1234`
+- **Email:** `tharindud02@gmail.com`
+- **Password:** `tharindu1234`
 
 ### URLs
 

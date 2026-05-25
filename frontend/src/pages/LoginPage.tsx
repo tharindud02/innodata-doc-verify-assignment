@@ -7,8 +7,8 @@ import { FileCheck2 } from "lucide-react";
 export function LoginPage() {
   const { login } = useAuth();
   const nav = useNavigate();
-  const [email, setEmail] = useState("demo@meridianbay.test");
-  const [password, setPassword] = useState("demo1234");
+  const [email, setEmail] = useState("tharindud02@gmail.com");
+  const [password, setPassword] = useState("tharindu1234");
   const [loading, setLoading] = useState(false);
   const [err, setErr] = useState<string | null>(null);
 
@@ -76,7 +76,7 @@ export function LoginPage() {
           </Link>
         </p>
         <p className="mt-3 rounded-md bg-slate-50 p-2 text-center text-xs text-slate-500">
-          Demo: demo@meridianbay.test / demo1234
+          Demo: tharindud02@gmail.com / tharindu1234
         </p>
       </div>
     </div>

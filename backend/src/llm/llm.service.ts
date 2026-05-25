@@ -116,7 +116,7 @@ export class LlmService {
     } catch (e) {
       if (e instanceof OpenAI.APIError && e.status === 401) {
         throw new Error(
-          'OpenAI API authentication failed — check OPENAI_API_KEY in backend/.env',
+          'OpenAI API authentication failed - check OPENAI_API_KEY in root .env',
         );
       }
       throw e;
@@ -161,7 +161,7 @@ export class LlmService {
           );
         }
         throw new Error(
-          'Anthropic API authentication failed — check ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL in backend/.env',
+          'Anthropic API authentication failed - check ANTHROPIC_API_KEY and ANTHROPIC_BASE_URL in root .env',
         );
       }
       throw e;

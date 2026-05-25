@@ -4,7 +4,8 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "node:path";
 
 export default defineConfig(({ mode }) => {
-  const env = loadEnv(mode, process.cwd(), "");
+  const envRoot = path.resolve(__dirname, "..");
+  const env = loadEnv(mode, envRoot, "");
   const port = Number(env.VITE_DEV_PORT ?? 5173);
   const apiTarget = env.VITE_API_PROXY_TARGET ?? "http://localhost:3001";
 
